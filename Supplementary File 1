@@ -1,0 +1,100 @@
+var size=10;
+
+macro "Quantif Tool [F1]" {
+
+leftButton=48;
+rightButton=36;
+shift=1;
+ctrl=2; 
+alt=8;
+
+
+setForegroundColor(255, 255, 255);
+//To mark the ROI in white
+
+run("Clear Results");
+print("To stop the macro press space while selecting the background noise");
+setOption("DisablePopupMenu", true);
+//to prevent the menu from opening when you right click (until "false" at the end of the loop)
+
+while (!isKeyDown("space")){
+//as long as you don't press space you continue the loop
+	roiManager("reset");
+
+	flags=0;
+	while (flags!=leftButton){
+		getCursorLoc(x, y, z, flags);
+		showStatus("Nucleus (Left click)");
+		makeRectangle(x-size/2, y-size/2, size, size);
+	}
+
+	title=getTitle+"_"+getInfo("slice.label");
+	//title corresponds to the name of the image sequence (folder name) followed by the name of the current image
+	roiManager("Add");
+	roiManager("Select", roiManager("count")-1);
+	roiManager("Rename", "Nucleus");
+	getStatistics(area, meanNucleus, min, max, std, histogram);
+	setResult("Nucleus", nResults, meanNucleus);
+	setResult("Label", nResults-1, title);
+	updateResults();
+	roiManager("Draw");
+
+//cyto
+	flags=0;
+	while (flags!=rightButton){
+		getCursorLoc(x, y, z, flags);
+		showStatus("Cytoplasm (Right click)");
+		makeRectangle(x-size/2, y-size/2, size, size);
+	}
+	roiManager("Add");
+	roiManager("Select", roiManager("count")-1);
+	roiManager("Rename", "Cyto");
+	getStatistics(area, meanCyto, min, max, std, histogram);
+	setResult("Cytoplasm", nResults-1, meanCyto);
+	updateResults();
+	roiManager("Draw");
+	
+	
+//background (Bg)
+	flags=0;
+	while (flags!= leftButton){
+		getCursorLoc(x, y, z, flags);
+		showStatus("Background (Left click)");
+		makeRectangle(x-size/2, y-size/2, size, size);
+	}
+	roiManager("Add");
+	roiManager("Select", roiManager("count")-1);
+	roiManager("Rename", "Bg");
+	getStatistics(area, meanBg, min, max, std, histogram);
+	setResult("Background", nResults-1, meanBg);
+	updateResults();
+	roiManager("Draw");
+	
+//Nucleus w/o Bg
+	Nucleus_wo_bg=meanNucleus-meanBg;
+	setResult("Nucleus_wo_bg", nResults-1, Nucleus_wo_bg);
+	updateResults();
+
+//cyto w/o Bg
+	Cyto_wo_bg=meanCyto-meanBg;
+	setResult("Cyto_wo_bg", nResults-1, Cyto_wo_bg);
+	updateResults();
+ 
+//ratio nucleus/cyto
+	Ratio_Nucleus_Cyto=Nucleus_wo_bg/Cyto_wo_bg;
+	setResult("Ratio_Nucleus_Cyto", nResults-1, Ratio_Nucleus_Cyto);
+	updateResults();
+	wait(250);
+	
+}
+print("quantification completed");
+
+}
+
+
+macro"Quantif Tool Options [F2]" {
+size=getNumber("Taille de la zone a quantifier: ", size);
+}
+macro"finMacro [F3]"{
+setOption("DisablePopupMenu", false);
+}
